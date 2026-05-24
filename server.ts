@@ -653,4 +653,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Do not spin up a blocking listener if we are running in Vercel serverless functions
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
