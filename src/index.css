@@ -52,3 +52,66 @@ body {
 .animate-slide-down {
   animation: slideDown 200ms ease-out forwards;
 }
+
+/* Print rules to isolate the CV sheet absolutely perfectly */
+@media print {
+  /* Set A4 page sizes with appropriate margins and hide default headers/footers */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 15mm 15mm 15mm;
+  }
+
+  /* Force document backgrounds to white and reset body */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide absolutely every element on the website */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Force display ONLY the CV print container and its contents */
+  #cv-generator-container,
+  #sheet-cv-canvas-print,
+  #sheet-cv-canvas-print * {
+    visibility: visible !important;
+  }
+
+  /* Position the CV canvas perfectly at the top-left of the paper */
+  #sheet-cv-canvas-print {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    border-radius: 0 !important;
+  }
+
+  /* Hide print buttons and elements explicitly to prevent double checks */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Force colors & backgrounds in PDF prints */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
