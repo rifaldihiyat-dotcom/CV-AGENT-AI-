@@ -1,0 +1,10 @@
+{
+  "name": "AI Career Assistant",
+  "description": "Aplikasi bimbingan karier bertenaga AI untuk review CV ramah ATS, simulasi interview interaktif, analisis kesenjangan skill, dan optimasi profil LinkedIn.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
