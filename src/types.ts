@@ -10,6 +10,8 @@ export interface CVAnalysis {
   improvements: string[];
   formattingAdvice: string;
   roleFitRating: string; // e.g. "Good Match", "Needs Adjustments"
+  suggestedBulletPoints?: string[]; // Copyable impact-driven CV accomplishment bullet points (STAR formula)
+  generatedFormattedCv?: string;   // Fully formatted Markdown of a professional CV based on user data
 }
 
 export interface InterviewMessage {

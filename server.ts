@@ -75,12 +75,17 @@ app.post("/api/cv-review", async (req, res) => {
             }
           },
           `Lakukan analisis mendalam terhadap dokumen CV/resume terlampir untuk posisi target: "${role}".
-Berikan evaluasi ramah ATS (Applicant Tracking System), skor kelayakan keseluruhan, kekuatan CV, kelemahan, saran perbaikan konkret, serta tips format.`
+Berikan evaluasi ramah ATS (Applicant Tracking System), skor kelayakan keseluruhan, kekuatan CV, kelemahan, saran perbaikan konkret, serta tips format.
+PENTING: Generate-lah 3-4 kalimat deskripsi pencapaian (Achievement Bullet Points) profesional bertenaga, siap salin menggunakan kata kerja aksi aktif dan rumus STAR khusus untuk posisi "${role}" yang bisa langsung ditempel user ke bagian pengalaman CV mereka.
+Selain itu, susun kembali seluruh data dari CV pengetik menjadi dokumen draf naskah CV utuh baru yang sangat optimal ramah ATS dalam format teks Markdown (Berisi Ringkasan Profesional, Kontak, Pendidikan, Pengalaman Terpilih dengan bullet point STAR, dan Keahlian Teknis terfokus).`
         ];
       } else {
         contents = [
           `Lakukan analisis mendalam terhadap teks CV berikut untuk posisi target: "${role}".
 Berikan evaluasi ramah ATS (Applicant Tracking System), skor kelayakan keseluruhan, kekuatan CV, kelemahan, saran perbaikan konkret, serta tips format.
+
+PENTING: Generate-lah 3-4 kalimat deskripsi pencapaian (Achievement Bullet Points) profesional bertenaga, siap salin menggunakan kata kerja aksi aktif dan rumus STAR khusus untuk posisi "${role}" yang bisa langsung ditempel user ke bagian pengalaman CV mereka.
+Selain itu, susun kembali seluruh data dari CV pengetik menjadi dokumen draf naskah CV utuh baru yang sangat optimal ramah ATS dalam format teks Markdown (Berisi Ringkasan Profesional, Kontak, Pendidikan, Pengalaman Terpilih dengan bullet point STAR, dan Keahlian Teknis terfokus).
 
 Teks CV:
 ${cvText}`
@@ -114,9 +119,18 @@ ${cvText}`
                 description: "Daftar rekomendasi revisi/improvement yang praktis dan taktis beserta contoh aksinya." 
               },
               formattingAdvice: { type: Type.STRING, description: "Saran format (layout, penggunaan tabel, font, jenis file, dsb) dalam 2-3 kalimat ringkas." },
-              roleFitRating: { type: Type.STRING, description: "Pilih salah satu predikat: 'Sangat Cocok', 'Cukup Layak', 'Butuh Perbaikan Banyak', 'Kurang Relevan'." }
+              roleFitRating: { type: Type.STRING, description: "Pilih salah satu predikat: 'Sangat Cocok', 'Cukup Layak', 'Butuh Perbaikan Banyak', 'Kurang Relevan'." },
+              suggestedBulletPoints: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Daftar 3-4 butir bullet point deskripsi pencapaian baru yang siap salin menggunakan rumus STAR & metrik persentase fiktif mencerahkan."
+              },
+              generatedFormattedCv: {
+                type: Type.STRING,
+                description: "Daf naskah teks CV baru ramah ATS yang sudah dioptimasi, berfokus pada target role, ditulis rapi dalam sintaksis Markdown."
+              }
             },
-            required: ["atsScore", "strengths", "weaknesses", "improvements", "formattingAdvice", "roleFitRating"]
+            required: ["atsScore", "strengths", "weaknesses", "improvements", "formattingAdvice", "roleFitRating", "suggestedBulletPoints", "generatedFormattedCv"]
           }
         }
       });
@@ -130,7 +144,7 @@ ${cvText}`
     }
 
     // High quality fallback mock data tailored dynamically to the user's role input!
-    const fallbackScore = Math.floor(Math.random() * 25) + 55; // generate score between 55 and 80
+    const fallbackScore = Math.floor(Math.random() * 20) + 68; // generate score between 68 and 88
     
     // Dynamic Indonesian mock response simulating real AI feedback
     let strengths = [
@@ -146,7 +160,7 @@ ${cvText}`
       "Pencapaian belum menggunakan rumus STAR (Situation, Task, Action, Result) dan tidak menyertakan metrik kuantitatif (angka/persentase)."
     ];
     let improvements = [
-      "Ubah kalimat tugas menjadi kalimat pencapaian. Contoh: Ganti 'Mengelola sosial media' menjadi 'Mengelola akun Instagram organisasi, meningkatkan engagement rate sebesar 25% dalam 3 bulan melalui konten terjadwal.'",
+      "Ubah kalimat tugas biasa menjadi kalimat pencapaian berorientasi hasil yang bisa disalin di bagian rekomendasi bawah.",
       "Tambahkan kata kunci spesifik untuk peran " + role + " seperti istilah tools, metodologi, atau hard skill yang relevan.",
       "Gunakan format layout satu kolom standar tanpa gambar, ikon berlebihan, atau tabel rumit untuk memaksimalkan read-rate mesin ATS."
     ];
@@ -160,13 +174,108 @@ ${cvText}`
       improvements.push("Gunakan template CV minimalis hitam-putih berbasis teks murni di Google Docs atau Microsoft Word.");
     }
 
+    let suggestedBulletPoints: string[] = [];
+    let generatedFormattedCv = "";
+
+    // High fidelity template generator based on role type for fallback mode
     if (role.toLowerCase().includes("it") || role.toLowerCase().includes("developer") || role.toLowerCase().includes("programmer") || role.toLowerCase().includes("tech")) {
       strengths.push("Daftar bahasa pemrograman dan teknologi (Technical Skills) disusun dengan rapi.");
       weaknesses.push("Belum menyertakan tautan/link portofolio GitHub atau demo proyek yang aktif.");
       improvements.push("Sematkan link GitHub, sertifikasi resmi cloud/coding, atau portfolio website di bagian kontak.");
-    } else if (role.toLowerCase().includes("marketing") || role.toLowerCase().includes("sales") || role.toLowerCase().includes("bisnis")) {
+      
+      suggestedBulletPoints = [
+        "Mengembangkan antarmuka web responsif menggunakan React.js dan Tailwind CSS, berhasil mempercepat rendering sebesar 35% berdasarkan audit Chrome DevTools.",
+        "Mengintegrasikan 5+ RESTful API pihak ketiga menggunakan Axios dengan penanganan error yang andal, mengurangi tingkat kegagalan koneksi backend hingga 15%.",
+        "Berkolaborasi dengan desainer UI/UX melalui Figma untuk merancang 12 halaman web interaktif, yang sukses memotong durasi rilis versi beta sebesar 2 minggu."
+      ];
+
+      generatedFormattedCv = `# NAMA LENGKAP MAHASISWA
+Jakarta, Indonesia | +62 812-3412-XXXX | email.anda@gmail.com | linkedin.com/in/username
+
+### RINGKASAN PROFESIONAL
+Mahasiswa tingkat akhir Teknik Informatika yang berdedikasi tinggi dan memiliki minat mendalam pada pengembangan web Frontend dan optimasi aplikasi ramah pengguna. Menguasai pemrograman Javascript/Typescript modern, React.js, serta desain tata letak responsif menggunakan Tailwind CSS. Terbiasa berkolaborasi dalam tim menggunakan repositori Git secara efisien.
+
+### PENDIDIKAN
+**Universitas Informatika Indonesia** — S1 Teknik Informatika (IPK: 3.65 / 4.00)
+*Agustus 2022 — Sekarang (Est. Lulus: 2026)*
+* Alumnus Program Studi Terbaik, aktif dalam komunitas coding kampus.
+
+### PENGALAMAN ORGANISASI & PROYEK
+**Frontend Engineer - Web Portfolio Optimizer** (Proyek Mandiri) — *Januari 2024*
+* Mengembangkan antarmuka web responsif menggunakan React.js dan Tailwind CSS yang mempercepat rendering sebesar 35%.
+* Menyusun kode reusable komponen arsitektur modular yang meningkatkan keterbacaan kode (clean code) dan memotong siklus debug tim hingga 20%.
+
+**Anggota Divisi Humas & Teknologi - Himpunan Mahasiswa** — *Maret 2023 — Desember 2023*
+* Mengoptimalkan portal informasi online himpunan, melayani akses lebih dari 500+ mahasiswa aktif dengan uptime 99%.
+* Membuat konten publik berita akademik mingguan dengan engagement rate platform naik sebanyak 25%.
+
+### KEAHLIAN TEKNIS
+* **Bahasa Pemrograman:** JavaScript (ES6+), TypeScript, HTML5, CSS3
+* **Framework & Library:** React.js, Next.js, Tailwind CSS, Bootstrap
+* **Framework Backend & Tools:** Node.js, Express, Git/GitHub, Figma, Postman API`;
+
+    } else if (role.toLowerCase().includes("marketing") || role.toLowerCase().includes("sales") || role.toLowerCase().includes("bisnis") || role.toLowerCase().includes("sosmed")) {
       weaknesses.push("Kurang menonjolkan pencapaian konversi, lead, atau pertumbuhan audiens secara kuantitatif.");
       improvements.push("Masukkan pencapaian konkret, contoh: 'Berhasil menggaet 10+ klien baru dalam event tahunan'.");
+
+      suggestedBulletPoints = [
+        "Merancang strategi konten TikTok & Instagram Reels organik yang berhasil menaikkan jumlah pengikut (followers) sebesar 45% dalam tempo 3 bulan.",
+        "Mengelola anggaran iklan promosi digital berbayar senilai Rp2.500.000 dengan hasil peningkatan konversi pembelian produk sebesar 18% dari target utama.",
+        "Membuat 35+ naskah copywriting kreatif kampanye bulanan dengan riset tren harian yang meningkatkan keterlibatan (engagement rate) audiens sebesar 22%."
+      ];
+
+      generatedFormattedCv = `# NAMA LENGKAP MAHASISWA
+Bandung, Indonesia | +62 813-1122-XXXX | email.anda@gmail.com | linkedin.com/in/username
+
+### RINGKASAN PROFESIONAL
+Mahasiswa Ilmu Pemasaran yang kreatif, analitis, dan memiliki hasrat mendalam pada Pemasaran Digital, Manajemen Media Sosial, serta Copywriting. Terampil mengambil keputusan berbasis metrik performa (Engagement Rate, CTR) untuk membangun awareness dan mendorong jumlah konversi pelanggan di berbagai media digital.
+
+### PENDIDIKAN
+**Universitas Bisnis Pembangunan** — S1 Ilmu Komunikasi / Pemasaran (IPK: 3.52 / 4.00)
+*Agustus 2022 — Sekarang*
+
+### PENGALAMAN ORGANISASI & MAGANG
+**Assoc Digital Marketer - Magang Toko Online** — *September 2023 — Januari 2024*
+* Merancang strategi konten TikTok & Instagram Reels organik yang berhasil menaikkan pengikut (followers) sebesar 45%.
+* Melayani respon kueri pelanggan melalui WhatsApp bisnis dengan rata-rata waktu respon kurang dari 5 menit, meningkatkan skor kepuasan pelanggan sebesar 15%.
+
+**Katua Divisi Publikasi & Desain Kampus** (Event Kreatif) — *Juni 2023*
+* Memimpin tim berisi 5 orang untuk mempromosikan acara seminar tahunan, menjaring lebih dari 350+ peserta berbayar (melebihi target awal sebesar 15%).
+* Merintis desain digital feeds yang memicu impresi postingan naik sebanyak 3,000+ tayangan organik.
+
+### KEAHLIAN UTAMA & TOOLS
+* **Spesialisasi:** Digital Marketing Strategy, Copywriting (AIDAS Formula), SEO Dasar, Social Media Analytics
+* **Tools Kreatif & Analitik:** Canva Premium, Meta Business Suite, Google Analytics, CapCut Desktop, TikTok Analytics`;
+
+    } else {
+      // General Career Candidate Mock Fallbacks
+      suggestedBulletPoints = [
+        "Memimpin inisiatif program kerja efisiensi koordinasi internal tim beranggota 6 orang, melahirkan peningkatan produktivitas kerja harian sebesar 20%.",
+        "Menyusun draf riset komparatif industri serta tren kebutuhan konsumen, memberikan rekomendasi krusial yang diadopsi oleh 3 tim kerja utama.",
+        "Mempresentasikan laporan capaian bulanan dan evaluasi program di hadapan 50+ audiens mahasiswa aktif dengan tingkat umpan balik kepuasan mencapai 90%."
+      ];
+
+      generatedFormattedCv = `# NAMA LENGKAP MAHASISWA
+Surabaya, Indonesia | +62 857-1234-XXXX | email.anda@gmail.com | linkedin.com/in/username
+
+### RINGKASAN PROFESIONAL
+Mahasiswa proaktif dengan rekam jejak kepemimpinan organisasi dan manajemen proyek yang terbukti andal. Memiliki antusiasme tinggi untuk berkontribusi secara profesional pada posisi magang administratif, manajerial, maupun operasional. Sangat menyukai pemecahan masalah secara kolaboratif.
+
+### PENDIDIKAN
+**Universitas Negeri Indonesia** — Sarjana S1 (IPK: 3.60 / 4.00)
+*Agustus 2022 — Sekarang*
+
+### PENGALAMAN ORGANISASI & MANAJEMEN EVENT
+**Ketua Pelaksana Program Kerja - Divisi Kemahasiswaan** — *Mei 2023 — Desember 2023*
+* Memimpin koordinasi internal tim beranggota 6 orang, sukses melahirkan peningkatan produktivitas pengerjaan laporan sebesar 20%.
+* Menyelesaikan pelaksanaan program tepat waktu dengan penghematan sisa anggaran kas terkontrol sebesar 12%.
+
+**Staf Administrasi & Dokumentasi - Event Nasional** — *Oktober 2023*
+* Mengelola arsip surat masuk dan pendaftaran peserta digital untuk lebih dari 400+ peserta dengan keakuratan data 100%.
+
+### KEAHLIAN & KOMPETENSI
+* **Kerja Sama Tim:** Kepemimpinan, Manajemen Waktu, Public Speaking, Administrasi Dokumen
+* **Tools Aplikasi:** Microsoft Office (Word, Excel, PowerPoint), Google Workspace (Sheets, Slides), Trello`;
     }
 
     res.json({
@@ -176,6 +285,8 @@ ${cvText}`
       improvements: improvements.slice(0, 4),
       formattingAdvice: "Gunakan tipe visual satu kolom yang bersih, pakai font standar seperti Arial atau Calibri ukuran 10-12pt, dan pastikan file Anda diekspor sebagai PDF standar.",
       roleFitRating: fallbackScore >= 75 ? "Cukup Layak" : "Butuh Perbaikan Banyak",
+      suggestedBulletPoints,
+      generatedFormattedCv,
       fallback: true
     });
 

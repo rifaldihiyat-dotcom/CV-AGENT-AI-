@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useRef } from "react";
-import { FileText, UploadCloud, CheckCircle, AlertTriangle, Lightbulb, RefreshCw, File } from "lucide-react";
+import { FileText, UploadCloud, CheckCircle, AlertTriangle, Lightbulb, RefreshCw, File, Copy, Check, Sparkles, Download } from "lucide-react";
 import { CVAnalysis } from "../types";
 
 export default function CVReviewer() {
@@ -20,6 +20,32 @@ export default function CVReviewer() {
   const [infoNotice, setInfoNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Clipboard success state
+  const [copiedBulletIdx, setCopiedBulletIdx] = useState<number | null>(null);
+  const [copiedCvText, setCopiedCvText] = useState(false);
+
+  const handleCopyBullet = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedBulletIdx(index);
+    setTimeout(() => setCopiedBulletIdx(null), 2000);
+  };
+
+  const handleCopyCv = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCvText(true);
+    setTimeout(() => setCopiedCvText(false), 2000);
+  };
+
+  const handleDownloadCvAsTxt = (text: string) => {
+    const element = document.createElement("a");
+    const file = new Blob([text], { type: "text/plain;charset=utf-8" });
+    element.href = URL.createObjectURL(file);
+    element.download = `CV_Optimasi_${targetRole.replace(/\s+/g, "_")}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   // Client-side backup analyzer engine to guarantee functionality on Vercel / serverless limits.
   const generateClientMockAnalysis = (textMode: boolean) => {
     const fallbackScore = Math.floor(Math.random() * 20) + 65; // 65-85
@@ -38,7 +64,7 @@ export default function CVReviewer() {
       "Pencapaian belum menggunakan rumus STAR (Situation, Task, Action, Result) dan tidak menyertakan metrik kuantitatif (angka/persentase)."
     ];
     let improvements = [
-      "Ubah kalimat tugas menjadi kalimat pencapaian. Contoh: Ganti 'Mengelola sosial media' menjadi 'Mengelola akun Instagram organisasi, meningkatkan engagement rate sebesar 25% dalam 3 bulan melalui konten terjadwal.'",
+      "Ubah kalimat tugas biasa menjadi kalimat pencapaian berorientasi hasil yang bisa disalin di bagian rekomendasi bawah.",
       "Tambahkan kata kunci spesifik untuk peran " + role + " seperti istilah tools, metodologi, atau hard skill yang relevan.",
       "Gunakan format layout satu kolom standar tanpa gambar, ikon berlebihan, atau tabel rumit untuk memaksimalkan read-rate mesin ATS."
     ];
@@ -52,13 +78,40 @@ export default function CVReviewer() {
       improvements.push("Gunakan template CV minimalis hitam-putih berbasis teks murni di Google Docs atau Microsoft Word.");
     }
 
+    let localSuggestedBulletPoints: string[] = [];
+    let localGeneratedFormattedCv = "";
+
     if (role.toLowerCase().includes("it") || role.toLowerCase().includes("developer") || role.toLowerCase().includes("programmer") || role.toLowerCase().includes("tech")) {
       strengths.push("Daftar bahasa pemrograman dan teknologi (Technical Skills) disusun dengan rapi.");
       weaknesses.push("Belum menyertakan tautan/link portofolio GitHub atau demo proyek yang aktif.");
       improvements.push("Sematkan link GitHub, sertifikasi resmi cloud/coding, atau portfolio website di bagian kontak.");
-    } else if (role.toLowerCase().includes("marketing") || role.toLowerCase().includes("sales") || role.toLowerCase().includes("bisnis")) {
+
+      localSuggestedBulletPoints = [
+        "Mengembangkan antarmuka web responsif menggunakan React.js dan Tailwind CSS, berhasil mempercepat rendering sebesar 35% berdasarkan audit Chrome DevTools.",
+        "Mengintegrasikan 5+ RESTful API pihak ketiga menggunakan Axios dengan penanganan error yang andal, mengurangi tingkat kegagalan koneksi backend hingga 15%.",
+        "Berkolaborasi dengan desainer UI/UX melalui Figma untuk merancang 12 halaman web interaktif, yang sukses memotong durasi rilis versi beta sebesar 2 minggu."
+      ];
+
+      localGeneratedFormattedCv = `# NAMA LENGKAP MAHASISWA\nJakarta, Indonesia | +62 812-3412-XXXX | email.anda@gmail.com | linkedin.com/in/username\n\n### RINGKASAN PROFESIONAL\nMahasiswa tingkat akhir Teknik Informatika yang berdedikasi tinggi dan memiliki minat mendalam pada pengembangan web Frontend dan optimasi aplikasi ramah pengguna. Menguasai pemrograman Javascript/Typescript modern, React.js, serta desain tata letak responsif menggunakan Tailwind CSS. Terbiasa berkolaborasi dalam tim menggunakan repositori Git secara efisien.\n\n### PENDIDIKAN\n**Universitas Informatika Indonesia** — S1 Teknik Informatika (IPK: 3.65 / 4.00)\n*Agustus 2022 — Sekarang (Est. Lulus: 2026)*\n* Alumnus Program Studi Terbaik, aktif dalam komunitas coding kampus.\n\n### PENGALAMAN ORGANISASI & PROYEK\n**Frontend Engineer - Web Portfolio Optimizer** (Proyek Mandiri) — *Januari 2024*\n* Mengembangkan antarmuka web responsif menggunakan React.js dan Tailwind CSS yang mempercepat rendering sebesar 35%.\n* Menyusun kode reusable komponen arsitektur modular yang meningkatkan keterbacaan kode (clean code) dan memotong siklus debug tim hingga 20%.\n\n**Anggota Divisi Humas & Teknologi - Himpunan Mahasiswa** — *Maret 2023 — Desember 2023*\n* Mengoptimalkan portal informasi online himpunan, melayani akses lebih dari 500+ mahasiswa aktif dengan uptime 99%.\n* Membuat konten publik berita akademik mingguan dengan engagement rate platform naik sebanyak 25%.\n\n### KEAHLIAN TEKNIS\n* **Bahasa Pemrograman:** JavaScript (ES6+), TypeScript, HTML5, CSS3\n* **Framework & Library:** React.js, Next.js, Tailwind CSS, Bootstrap\n* **Framework Backend & Tools:** Node.js, Express, Git/GitHub, Figma, Postman API`;
+    } else if (role.toLowerCase().includes("marketing") || role.toLowerCase().includes("sales") || role.toLowerCase().includes("bisnis") || role.toLowerCase().includes("sosmed")) {
       weaknesses.push("Kurang menonjolkan pencapaian konversi, lead, atau pertumbuhan audiens secara kuantitatif.");
       improvements.push("Masukkan pencapaian konkret, contoh: 'Berhasil menggaet 10+ klien baru dalam event tahunan'.");
+
+      localSuggestedBulletPoints = [
+        "Merancang strategi konten TikTok & Instagram Reels organik yang berhasil menaikkan jumlah pengikut (followers) sebesar 45% dalam tempo 3 bulan.",
+        "Mengelola anggaran iklan promosi digital berbayar senilai Rp2.500.000 dengan hasil peningkatan konversi pembelian produk sebesar 18% dari target utama.",
+        "Membuat 35+ naskah copywriting kreatif kampanye bulanan dengan riset tren harian yang meningkatkan keterlibatan (engagement rate) audiens sebesar 22%."
+      ];
+
+      localGeneratedFormattedCv = `# NAMA LENGKAP MAHASISWA\nBandung, Indonesia | +62 813-1122-XXXX | email.anda@gmail.com | linkedin.com/in/username\n\n### RINGKASAN PROFESIONAL\nMahasiswa Ilmu Pemasaran yang kreatif, analitis, dan memiliki hasrat mendalam pada Pemasaran Digital, Manajemen Media Sosial, serta Copywriting. Terampil mengambil keputusan berbasis metrik performa (Engagement Rate, CTR) untuk membangun awareness dan mendorong jumlah konversi pelanggan di berbagai media digital.\n\n### PENDIDIKAN\n**Universitas Bisnis Pembangunan** — S1 Ilmu Komunikasi / Pemasaran (IPK: 3.52 / 4.00)\n*Agustus 2022 — Sekarang*\n\n### PENGALAMAN ORGANISASI & MAGANG\n**Assoc Digital Marketer - Magang Toko Online** — *September 2023 — Januari 2024*\n* Merancang strategi konten TikTok & Instagram Reels organik yang berhasil menaikkan pengikut (followers) sebesar 45%.\n* Melayani respon kueri pelanggan melalui WhatsApp bisnis dengan rata-rata waktu respon kurang dari 5 menit, meningkatkan skor kepuasan pelanggan sebesar 15%.\n\n**Katua Divisi Publikasi & Desain Kampus** (Event Kreatif) — *Juni 2023*\n* Memimpin tim berisi 5 orang untuk mempromosikan acara seminar tahunan, menjaring lebih dari 350+ peserta berbayar (melebihi target awal sebesar 15%).\n* Merintis desain digital feeds yang memicu impresi postingan naik sebanyak 3,000+ tayangan organik.\n\n### KEAHLIAN UTAMA & TOOLS\n* **Spesialisasi:** Digital Marketing Strategy, Copywriting (AIDAS Formula), SEO Dasar, Social Media Analytics\n* **Tools Kreatif & Analitik:** Canva Premium, Meta Business Suite, Google Analytics, CapCut Desktop, TikTok Analytics`;
+    } else {
+      localSuggestedBulletPoints = [
+        "Memimpin inisiatif program kerja efisiensi koordinasi internal tim beranggota 6 orang, melahirkan peningkatan produktivitas kerja harian sebesar 20%.",
+        "Menyusun draf riset komparatif industri serta tren kebutuhan konsumen, memberikan rekomendasi krusial yang diadopsi oleh 3 tim kerja utama.",
+        "Mempresentasikan laporan capaian bulanan dan evaluasi program di hadapan 50+ audiens mahasiswa aktif dengan tingkat umpan balik kepuasan mencapai 90%."
+      ];
+
+      localGeneratedFormattedCv = `# NAMA LENGKAP MAHASISWA\nSurabaya, Indonesia | +62 857-1234-XXXX | email.anda@gmail.com | linkedin.com/in/username\n\n### RINGKASAN PROFESIONAL\nMahasiswa proaktif dengan rekam jejak kepemimpinan organisasi dan manajemen proyek yang terbukti andal. Memiliki antusiasme tinggi untuk berkontribusi secara profesional pada posisi magang administratif, manajerial, maupun operasional. Sangat menyukai pemecahan masalah secara kolaboratif.\n\n### PENDIDIKAN\n**Universitas Negeri Indonesia** — Sarjana S1 (IPK: 3.60 / 4.00)\n*Agustus 2022 — Sekarang*\n\n### PENGALAMAN ORGANISASI & MANAJEMEN EVENT\n**Ketua Pelaksana Program Kerja - Divisi Kemahasiswaan** — *Mei 2023 — Desember 2023*\n* Memimpin koordinasi internal tim beranggota 6 orang, sukses melahirkan peningkatan produktivitas pengerjaan laporan sebesar 20%.\n* Menyelesaikan pelaksanaan program tepat waktu dengan penghematan sisa anggaran kas terkontrol sebesar 12%.\n\n**Staf Administrasi & Dokumentasi - Event Nasional** — *Oktober 2023*\n* Mengelola arsip surat masuk dan pendaftaran peserta digital untuk lebih dari 400+ peserta dengan keakuratan data 100%.\n\n### KEAHLIAN & KOMPETENSI\n* **Kerja Sama Tim:** Kepemimpinan, Manajemen Waktu, Public Speaking, Administrasi Dokumen\n* **Tools Aplikasi:** Microsoft Office (Word, Excel, PowerPoint), Google Workspace (Sheets, Slides), Trello`;
     }
 
     return {
@@ -68,6 +121,8 @@ export default function CVReviewer() {
       improvements: improvements.slice(0, 4),
       formattingAdvice: "Gunakan tipe visual satu kolom yang bersih, pakai font standar seperti Arial atau Calibri ukuran 10-12pt, dan pastikan file Anda diekspor sebagai PDF standar.",
       roleFitRating: fallbackScore >= 75 ? "Sangat Cocok" : "Cukup Layak",
+      suggestedBulletPoints: localSuggestedBulletPoints,
+      generatedFormattedCv: localGeneratedFormattedCv,
       fallback: true
     };
   };
@@ -553,6 +608,90 @@ Riwayat Aktivitas:
                 "{analysis.formattingAdvice}"
               </p>
             </div>
+
+            {/* ACTIONABLE COPY-PASTEABLE BULLET POINTS */}
+            {analysis.suggestedBulletPoints && analysis.suggestedBulletPoints.length > 0 && (
+              <div className="bg-emerald-50/50 border border-emerald-200 p-5 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                  <Sparkles className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                  Kalimat Deskripsi Pencapaian Siap Pakai (Rumus STAR)
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed -mt-1">
+                  Salin butir-butir pengalaman berbobot tinggi berikut secara langsung ke bagian riwayat CV Anda untuk menonjolkan kata kunci krusial posisi <strong>{targetRole}</strong>:
+                </p>
+                <div className="space-y-2.5">
+                  {analysis.suggestedBulletPoints.map((bullet, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 bg-white border border-slate-200 p-3 rounded-xl hover:border-emerald-300 transition-colors">
+                      <p className="text-xs text-slate-700 leading-relaxed font-mono flex-1">
+                        • {bullet}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyBullet(bullet, idx)}
+                        className="self-end sm:self-center shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-[10px] font-bold text-slate-650 hover:text-emerald-700 rounded-lg transition-all cursor-pointer"
+                      >
+                        {copiedBulletIdx === idx ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Salin Kalimat</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI-GENERATED ATS-COMPLIANT CV PREVIEW CARD */}
+            {analysis.generatedFormattedCv && (
+              <div className="bg-slate-900 text-slate-100 p-5 rounded-2xl space-y-4 shadow-lg border border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 px-2 bg-emerald-500 text-slate-950 font-extrabold text-[10px] rounded-md uppercase tracking-wider">ATS MATCHED</div>
+                    <h5 className="font-bold text-sm text-white">Generator Draf CV Ideal AI ({targetRole})</h5>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCv(analysis.generatedFormattedCv!)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 text-[10px] font-semibold rounded-lg transition-all cursor-pointer"
+                    >
+                      {copiedCvText ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Salin Seluruh CV</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadCvAsTxt(analysis.generatedFormattedCv!)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Simpan (.txt)</span>
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Kami menguraikan draf Anda dan merekonstruksinya menjadi dokumen CV murni ramah mesin ATS perekrutan. Anda dapat langsung menyalin naskah utuh di bawah untuk disalin langsung ke Canva, Microsoft Word, atau Google Docs Anda!
+                </p>
+                <div className="max-h-[350px] overflow-y-auto bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] leading-relaxed text-slate-350 whitespace-pre-wrap select-all">
+                  {analysis.generatedFormattedCv}
+                </div>
+              </div>
+            )}
 
             {/* API Mode Tagging */}
             {analysis.fallback && (
