@@ -4,10 +4,16 @@ import { FileText, UploadCloud, CheckCircle, AlertTriangle, Lightbulb, RefreshCw
 import { CVAnalysis } from "../types";
 
 export default function CVReviewer() {
+  const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [cvText, setCvText] = useState("");
   const [targetRole, setTargetRole] = useState("Frontend Developer");
+  
+  // File Upload states
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileBase64, setFileBase64] = useState<string | null>(null);
+  const [fileMimeType, setFileMimeType] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<CVAnalysis | null>(null);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
@@ -73,7 +79,7 @@ Riwayat Aktivitas:
     setErrorLocal(null);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      processFile(files[0]);
+      processUploadedFile(files[0]);
     }
   };
 
@@ -81,29 +87,42 @@ Riwayat Aktivitas:
     setErrorLocal(null);
     const files = e.target.files;
     if (files && files.length > 0) {
-      processFile(files[0]);
+      processUploadedFile(files[0]);
     }
   };
 
-  const processFile = (file: File) => {
+  // Modern Base64 document processor (keeps binaries clean, triggers no console code/symbol dumps)
+  const processUploadedFile = (file: File) => {
     setFileName(file.name);
-    // Simple reader
+    setErrorLocal(null);
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        setCvText(text);
+      const result = event.target?.result as string;
+      if (result) {
+        setFileBase64(result);
+        
+        // Parse actual MIME component
+        const match = result.match(/^data:(.*?);base64,(.*)$/);
+        if (match) {
+          setFileMimeType(match[1]);
+        } else {
+          setFileMimeType(file.type || "application/pdf");
+        }
       } else {
-        // Fallback or preview parsing
-        setCvText(`[Konten Dibaca Dari File: ${file.name}]\n\nResume Mahasiswa Pelamar Kerja.\nPosisi Target: ${targetRole}\nLengkapi dengan menulis detail akademis di sini agar analisis AI berjalan maksimal...`);
+        setErrorLocal("Format file mati atau tidak dapat dibaca.");
       }
     };
-    reader.readAsText(file.slice(0, 10000)); // Read first 10kb
+    reader.onerror = () => {
+      setErrorLocal("Gagal memajang & membaca file dokumen.");
+    };
+    reader.readAsDataURL(file);
   };
 
-  const triggerAnalysis = async () => {
+  // Button 1 Tracker: Text Analysis
+  const triggerTextAnalysis = async () => {
     if (!cvText.trim()) {
-      setErrorLocal("Silakan isi teks CV Anda terlebih dahulu atau unggah file.");
+      setErrorLocal("Silakan ketik atau isi draf teks resume di kolom terlebih dahulu.");
       return;
     }
     setLoading(true);
@@ -117,12 +136,47 @@ Riwayat Aktivitas:
         body: JSON.stringify({ cvText, targetRole })
       });
       if (!response.ok) {
-        throw new Error("Respon server bermasalah");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Respon server bermasalah saat mengirimkan teks.");
       }
       const data = await response.json();
       setAnalysis(data);
     } catch (err: any) {
-      setErrorLocal("Gagal menganalisis CV. Pastikan server aktif.");
+      setErrorLocal(err.message || "Gagal menganalisis draf teks CV Anda.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Button 2 Tracker: File Upload Analysis (Direct Gemini Multi-modal or fallback parser)
+  const triggerFileAnalysis = async () => {
+    if (!fileBase64) {
+      setErrorLocal("Silakan letakkan/pilih file PDF, Word, atau teks dokumen Anda terlebih dahulu.");
+      return;
+    }
+    setLoading(true);
+    setAnalysis(null);
+    setErrorLocal(null);
+
+    try {
+      const response = await fetch("/api/cv-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          fileBase64, 
+          mimeType: fileMimeType, 
+          fileName,
+          targetRole 
+        })
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Respon backend bermasalah saat mengekstrak file.");
+      }
+      const data = await response.json();
+      setAnalysis(data);
+    } catch (err: any) {
+      setErrorLocal(err.message || "Gagal menganalisis file resume terpilih.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +185,9 @@ Riwayat Aktivitas:
   const loadTemplate = (template: typeof templates[0]) => {
     setCvText(template.text);
     setTargetRole(template.role);
-    setFileName(`Templat_${template.role.replace(" ", "_")}.txt`);
+    setFileName(null);
+    setFileBase64(null);
+    setFileMimeType(null);
     setErrorLocal(null);
   };
 
@@ -142,65 +198,46 @@ Riwayat Aktivitas:
         <div className="mb-4">
           <h3 className="text-lg font-bold text-slate-800">Reviewer CV & Analisis ATS</h3>
           <p className="text-xs text-slate-500 leading-relaxed mt-1">
-            Unggah resume atau pakai draf teks CV Anda untuk mengecek seberapa siap CV diproses sistem verifikasi otomatis industri.
+            Gunakan asisten kecerdasan buatan untuk mengevaluasi draf CV atau mengunggah file resume Anda agar lolos seleksi otomatis industri.
           </p>
         </div>
 
-        {/* Quickstart Templates */}
+        {/* Elegant Tab Selector to switch inputs cleanly */}
+        <div className="flex border border-slate-200/80 p-1 bg-slate-50/70 rounded-xl mb-5">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("text");
+              setErrorLocal(null);
+            }}
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 ${
+              activeTab === "text"
+                ? "bg-white text-emerald-800 shadow-sm border border-slate-200/50"
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/40"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Salinan Teks
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("file");
+              setErrorLocal(null);
+            }}
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 ${
+              activeTab === "file"
+                ? "bg-white text-emerald-800 shadow-sm border border-slate-200/50"
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/40"
+            }`}
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            Tarik/Letakkan CV (File)
+          </button>
+        </div>
+
+        {/* Dynamic target role selection (always active) */}
         <div className="mb-4">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Isi Cepat Dengan Templat Mahasiswa:
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {templates.map((tmpl, idx) => (
-              <button
-                key={idx}
-                type="button"
-                id={`template-btn-${idx}`}
-                onClick={() => loadTemplate(tmpl)}
-                className="text-xs bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-800 border border-slate-350 px-3 py-1.5 rounded-xl transition-all-300"
-              >
-                {tmpl.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* File Drag Drop Zone */}
-        <div
-          id="dropzone"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-300 ${
-            isDragging 
-              ? "border-emerald-500 bg-emerald-50/40" 
-              : "border-slate-350 hover:border-sky-400 hover:bg-sky-50/10"
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            id="file-input"
-            accept=".txt,.pdf,.docx"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-bounce-slow" />
-          <p className="text-sm font-semibold text-slate-700">Tarik & Letakkan file CV di sini</p>
-          <p className="text-xs text-slate-400 mt-1">Mendukung PDF, Word, atau teks murni (.txt)</p>
-          
-          {fileName && (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 border border-sky-100/50 rounded-lg text-xs font-medium text-sky-800">
-              <File className="w-3.5 h-3.5" />
-              <span>{fileName}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Target role input */}
-        <div className="mt-4">
           <label htmlFor="target-role" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
             Pekerjaan Target (Role)
           </label>
@@ -214,43 +251,131 @@ Riwayat Aktivitas:
           />
         </div>
 
-        {/* Text Area */}
-        <div className="mt-4">
-          <label htmlFor="cv text" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-            Salinan Teks Resume / CV
-          </label>
-          <textarea
-            id="cv-text"
-            rows={10}
-            value={cvText}
-            onChange={(e) => setCvText(e.target.value)}
-            placeholder="Tempel atau ketik teks CV Anda di sini secara lengkap (Pendidikan, Pengalaman Kerja/Organisasi, Skill, Proyek)..."
-            className="w-full text-xs font-mono border border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-200 outline-hidden bg-slate-50/30 p-4 rounded-xl leading-relaxed resize-y"
-          />
-        </div>
+        {/* TAB CONTENT: MANUALLY INPUT TEXT */}
+        {activeTab === "text" && (
+          <div className="space-y-4">
+            {/* Quickstart Templates */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Pilih Draf Cepat Dari Templat:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {templates.map((tmpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    id={`template-btn-${idx}`}
+                    onClick={() => loadTemplate(tmpl)}
+                    className="text-xs bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-800 border border-slate-200 px-3 py-1.5 rounded-xl transition-all-300"
+                  >
+                    {tmpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {errorLocal && (
-          <p className="text-xs text-red-600 mt-2 bg-red-50 border border-red-200 p-2.5 rounded-lg">
-            {errorLocal}
-          </p>
+            {/* Textarea */}
+            <div>
+              <label htmlFor="cv-text" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                Salinan Isi Teks Resume / CV
+              </label>
+              <textarea
+                id="cv-text"
+                rows={11}
+                value={cvText}
+                onChange={(e) => setCvText(e.target.value)}
+                placeholder="Tempelkan teks riwayat CV Anda secara lengkap (Pendidikan, Organisasi, Skill, Pengalaman)..."
+                className="w-full text-xs font-mono border border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-200 outline-hidden bg-slate-50/30 p-4 rounded-xl leading-relaxed resize-y"
+              />
+            </div>
+
+            {errorLocal && (
+              <p className="text-xs text-red-600 mt-2 bg-red-50 border border-red-200 p-2.5 rounded-lg">
+                {errorLocal}
+              </p>
+            )}
+
+            {/* BTN 1: TEXT ANALYSIS */}
+            <button
+              type="button"
+              id="analyze-text-btn"
+              disabled={loading}
+              onClick={triggerTextAnalysis}
+              className="w-full mt-4 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Menganalisis Teks CV...
+                </>
+              ) : (
+                "Mulai Analisis Salinan Teks AI"
+              )}
+            </button>
+          </div>
         )}
 
-        <button
-          type="button"
-          id="analyze-cv-btn"
-          disabled={loading}
-          onClick={triggerAnalysis}
-          className="w-full mt-4 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all shadow-xs cursor-pointer"
-        >
-          {loading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Menganalisis Kualitas CV Anda...
-            </>
-          ) : (
-            "Mulai Analisis Resume AI"
-          )}
-        </button>
+        {/* TAB CONTENT: FILE UPLOAD (DRAG AND DROP) */}
+        {activeTab === "file" && (
+          <div className="space-y-4">
+            {/* File drag-drop field */}
+            <div
+              id="dropzone"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 ${
+                isDragging 
+                  ? "border-emerald-500 bg-emerald-50/40" 
+                  : "border-slate-300 hover:border-sky-400 hover:bg-sky-50/10"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                id="file-input"
+                accept=".txt,.pdf"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <UploadCloud className="w-9 h-9 text-slate-450 mx-auto mb-2.5 animate-bounce-slow" />
+              <p className="text-sm font-bold text-slate-700">Tarik & Letakkan file CV di sini</p>
+              <p className="text-xs text-slate-400 mt-1">Mendukung format Dokumen PDF atau Teks (.txt)</p>
+              
+              {fileName && (
+                <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-250/55 rounded-lg text-xs font-semibold text-emerald-800">
+                  <File className="w-4 h-4 text-emerald-600" />
+                  <span>{fileName}</span>
+                </div>
+              )}
+            </div>
+
+            {errorLocal && (
+              <p className="text-xs text-red-600 mt-2 bg-red-50 border border-red-200 p-2.5 rounded-lg">
+                {errorLocal}
+              </p>
+            )}
+
+            {/* BTN 2: FILE ANALYSIS */}
+            <button
+              type="button"
+              id="analyze-file-btn"
+              disabled={loading}
+              onClick={triggerFileAnalysis}
+              className="w-full mt-4 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Mengekstrak & Menganalisis File CV...
+                </>
+              ) : (
+                "Mulai Analisis File Unggahan AI"
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KANAN - REPORT OUTPUT */}

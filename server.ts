@@ -51,9 +51,9 @@ app.get("/api/status", (req, res) => {
 // ==========================================
 app.post("/api/cv-review", async (req, res) => {
   try {
-    const { cvText, targetRole } = req.body;
-    if (!cvText || cvText.trim() === "") {
-       res.status(400).json({ error: "Konten CV tidak boleh kosong." });
+    const { cvText, targetRole, fileBase64, mimeType, fileName } = req.body;
+    if ((!cvText || cvText.trim() === "") && !fileBase64) {
+       res.status(400).json({ error: "Konten CV tidak boleh kosong. Harap isi teks atau unggah file resume." });
        return;
     }
 
@@ -61,16 +61,36 @@ app.post("/api/cv-review", async (req, res) => {
     const client = getGeminiClient();
 
     if (client) {
-      // Real Gemini API Call with structured responseSchema
-      const prompt = `Lakukan analisis mendalam terhadap teks CV berikut untuk posisi target: "${role}".
+      // Create multimodal or text structures dynamically
+      let contents: any[] = [];
+      if (fileBase64) {
+        const pureBase64 = fileBase64.replace(/^data:.*?;base64,/, "");
+        const activeMime = mimeType || "application/pdf";
+        
+        contents = [
+          {
+            inlineData: {
+              mimeType: activeMime,
+              data: pureBase64
+            }
+          },
+          `Lakukan analisis mendalam terhadap dokumen CV/resume terlampir untuk posisi target: "${role}".
+Berikan evaluasi ramah ATS (Applicant Tracking System), skor kelayakan keseluruhan, kekuatan CV, kelemahan, saran perbaikan konkret, serta tips format.`
+        ];
+      } else {
+        contents = [
+          `Lakukan analisis mendalam terhadap teks CV berikut untuk posisi target: "${role}".
 Berikan evaluasi ramah ATS (Applicant Tracking System), skor kelayakan keseluruhan, kekuatan CV, kelemahan, saran perbaikan konkret, serta tips format.
 
 Teks CV:
-${cvText}`;
+${cvText}`
+        ];
+      }
 
+      // Real Gemini API Call with structured responseSchema
       const response = await client.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: prompt,
+        contents,
         config: {
           systemInstruction: "Kamu adalah seorang pakar HRD (Human Resources) dan Resume Analyst profesional asal Indonesia yang membantu mahasiswa membuat CV ramah ATS.",
           responseMimeType: "application/json",
@@ -114,7 +134,9 @@ ${cvText}`;
     
     // Dynamic Indonesian mock response simulating real AI feedback
     let strengths = [
-      "Deskripsi riwayat pendidikan ditulis dengan jelas dan terperinci.",
+      fileBase64 
+        ? `Dokumen terunggah (${fileName || "CV"}) terbaca dengan susunan tata letak yang rapi.`
+        : "Deskripsi riwayat pendidikan ditulis dengan jelas dan terperinci.",
       "Penggunaan kata kerja aktif dalam menjelaskan kegiatan magang/organisasi cukup bervariasi.",
       "Informasi kontak dasar (Email, LinkedIn, Lokasi) diletakkan di bagian atas secara strategis."
     ];
@@ -129,7 +151,11 @@ ${cvText}`;
       "Gunakan format layout satu kolom standar tanpa gambar, ikon berlebihan, atau tabel rumit untuk memaksimalkan read-rate mesin ATS."
     ];
 
-    if (cvText.toLowerCase().includes("canva") || cvText.toLowerCase().includes("kreatif") || cvText.toLowerCase().includes("creative")) {
+    if (fileName && fileName.toLowerCase().endsWith(".pdf")) {
+      strengths.push("File dikirimkan dalam format PDF standar industri yang sangat disukai sistem recruiter.");
+    }
+
+    if (cvText && (cvText.toLowerCase().includes("canva") || cvText.toLowerCase().includes("kreatif") || cvText.toLowerCase().includes("creative"))) {
       weaknesses.push("Format kreatif terdeteksi. Parser ATS tradisional sering gagal membaca teks di balik kotak warna warni.");
       improvements.push("Gunakan template CV minimalis hitam-putih berbasis teks murni di Google Docs atau Microsoft Word.");
     }
