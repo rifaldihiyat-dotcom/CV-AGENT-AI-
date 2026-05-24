@@ -55,10 +55,10 @@ body {
 
 /* Print rules to isolate the CV sheet absolutely perfectly */
 @media print {
-  /* Set A4 page sizes with appropriate margins and hide default headers/footers */
+  /* Set A4 page sizes with 0 margin to programmatically hide default browser headers/footers (date, title, URL) */
   @page {
     size: A4 portrait;
-    margin: 15mm 15mm 15mm 15mm;
+    margin: 0;
   }
 
   /* Force document backgrounds to white and reset body */
@@ -84,7 +84,7 @@ body {
     visibility: visible !important;
   }
 
-  /* Position the CV canvas perfectly at the top-left of the paper */
+  /* Position the CV canvas perfectly at the top-left of the paper and use internal padding instead of page margins */
   #sheet-cv-canvas-print {
     visibility: visible !important;
     position: absolute !important;
@@ -93,11 +93,12 @@ body {
     width: 100% !important;
     min-width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
+    height: 100% !important;
+    min-height: 297mm !important; /* Standard A4 height */
+    box-sizing: border-box !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
+    padding: 20mm 18mm !important; /* Beautiful margin margins inside the print document */
     margin: 0 !important;
     background: #ffffff !important;
     border-radius: 0 !important;
